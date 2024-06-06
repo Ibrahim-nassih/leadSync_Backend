@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: leads-back
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: leads-back
+  template:
+    metadata:
+      labels:
+        app: leads-back
+    spec:
+      containers:
+        - name: leads-back
+          image: ${BUILD_NAME}
+      imagePullSecrets:
+        - name: gitlab-registry

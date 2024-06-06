@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: leads-back
+    tier: backend
+    backend: "true"
+  name: leads-back-svc
+spec:
+  selector:
+    app: leads-back
+  ports:
+    - port: 5000
+      targetPort: 5000
