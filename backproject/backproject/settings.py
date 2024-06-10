@@ -80,11 +80,11 @@ WSGI_APPLICATION = 'backproject.wsgi.application'
 DATABASES = {
     "default": {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'leads_db',
-        'USER': 'leads_usr',
-        'PASSWORD': 'leads_user_pass',
-        'HOST': '34.77.155.11',
-        'PORT': '32630',
+        'NAME': 'postgres',
+        'USER': 'postgres',
+        'PASSWORD': 'mysecretpassword',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 

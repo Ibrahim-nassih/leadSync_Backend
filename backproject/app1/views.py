@@ -7,7 +7,7 @@ from .serializers import CustomUserSerializer,SpaceSerializer,WorkflowSerializer
 from .serializers import MembershipSerializer,TicketSerializer,SprintSerializer
 from .decorator import decorator,keycloak_openid
 from django.http import Http404
-
+import jwt
 class RegisterView(APIView):
     def post(self, request, format=None):
         # Get the user data from the request
@@ -57,7 +57,7 @@ class RegisterView(APIView):
                 {"message": "User creation failed: {}".format(str(e))},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    @decorator.requires_token
+    #@decorator.requires_token
     def get(self, request):
         space_id = request.GET.get('space')
         team = Team.objects.filter(space_id=space_id).first()
@@ -76,12 +76,14 @@ class RegisterView(APIView):
 
 from django.db.models import Q
 class SpaceView(APIView):
-    @decorator.requires_token
+    #@decorator.requires_token
     def get(self, request):
         # Retrieve all spaces created by the user
         token = request.headers.get('Authorization')
         access_token = token[7:]
-        user_info = keycloak_openid.userinfo(access_token)
+        # user_info = keycloak_openid.userinfo(access_token)
+        user_info = jwt.decode(access_token, options={"verify_signature": False})
+        print(f"token: {user_info['preferred_username']}")
         user = CustomUser.objects.filter(username=user_info['preferred_username']).first()
 
         # Retrieve spaces created by the user
@@ -102,13 +104,14 @@ class SpaceView(APIView):
 
 
     
-    @decorator.requires_token
+    # @decorator.requires_token
     def post(self, request):
         print(request.data)
         token = request.headers.get('Authorization')
         access_token = token[7:]
-        user=keycloak_openid.userinfo(access_token)
-        user = CustomUser.objects.filter(username=user['preferred_username']).first()
+        #user=keycloak_openid.userinfo(access_token)
+        user_info = jwt.decode(access_token, options={"verify_signature": False})
+        user = CustomUser.objects.filter(username=user_info['preferred_username']).first()
         serializer = SpaceSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.validated_data['created_by'] = user
@@ -116,7 +119,7 @@ class SpaceView(APIView):
         return Response(SpaceSerializer(space).data)
 
 
-    @decorator.requires_token
+    #@decorator.requires_token
     def get_space(self, space_id):
         try:
             space = Space.objects.get(id=space_id)
@@ -124,7 +127,7 @@ class SpaceView(APIView):
         except Space.DoesNotExist:
             return None
 
-    @decorator.requires_token
+    #@decorator.requires_token
     def put(self, request, space_id):
         # Update a specific space
         space = self.get_space(space_id)
@@ -136,7 +139,7 @@ class SpaceView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_404_NOT_FOUND)
 
-    @decorator.requires_token
+    #@decorator.requires_token
     def delete(self, request):
         # Delete a specific space
         space_id = request.data.get('id')
@@ -150,7 +153,7 @@ class SpaceView(APIView):
     
 class WorkflowView(APIView):
         # Retrieve all workflow by space
-    @decorator.requires_token
+    #@decorator.requires_token
     def get(self, request):
         id = request.headers.get('id')
         workflows = Workflow.objects.filter(space_id=id)
@@ -159,7 +162,7 @@ class WorkflowView(APIView):
         serializer = WorkflowSerializer(workflows, many=True)
         return Response(serializer.data)
     
-    @decorator.requires_token
+    #@decorator.requires_token
     def post(self, request):
         serializer = WorkflowSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -167,7 +170,7 @@ class WorkflowView(APIView):
         print(workflow)
         return Response(WorkflowSerializer(workflow).data)
        
-    @decorator.requires_token
+    #@decorator.requires_token
     def delete(self, request):
         workflow_id = request.GET.get('id')
         W = Workflow.objects.filter(id=workflow_id).first()
@@ -176,7 +179,7 @@ class WorkflowView(APIView):
         W.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 class WorkflowStepsAPIView(APIView):
-    @decorator.requires_token
+    #@decorator.requires_token
     def post(self, request):
         print(request.data)
         steps=request.data
@@ -185,7 +188,7 @@ class WorkflowStepsAPIView(APIView):
             serializer.save()
         return Response(serializer.data,status=201)
     
-    @decorator.requires_token
+    #@decorator.requires_token
     def get(self, request):
         workflow_ids = request.GET.get('workflowIds')
         steps = Step.objects.filter(workflow=workflow_ids).order_by('order')  # Order the steps by ID
@@ -196,7 +199,7 @@ class WorkflowStepsAPIView(APIView):
         serializer = StepSerializer(steps, many=True)
         response = Response(serializer.data)
         return response
-    @decorator.requires_token
+    #@decorator.requires_token
     def put(self, request):
         from_step = request.data.get('from_step')
         to_step = request.data.get('to_step')
@@ -213,7 +216,7 @@ class WorkflowStepsAPIView(APIView):
         serializer = StepSerializer(steps,many=True)
         return Response(serializer.data)
 class SpaceViewDetails(APIView):
-    @decorator.requires_token
+    #@decorator.requires_token
     def get(self,request,id):
         stepsworkflow=Step.objects.filter(workflow_id=id).order_by('id')
         print(stepsworkflow)
@@ -224,7 +227,7 @@ class SpaceViewDetails(APIView):
         return response
     
 class TransactionView(APIView):
-    @decorator.requires_token
+    #@decorator.requires_token
     def post(self, request):
         transactions=request.data
         serializer=TransactionSerializer(data=transactions,many=True)
@@ -232,7 +235,7 @@ class TransactionView(APIView):
             serializer.save()
 
         return Response(serializer.data,status=201)
-    @decorator.requires_token
+    #@decorator.requires_token
     def get(self,request):
         workflow_ids = request.GET.get('workflowIds')
         transactions = Transaction.objects.filter(workflow=workflow_ids).order_by('id')  # Order the steps by ID
@@ -243,7 +246,7 @@ class TransactionView(APIView):
         serializer = TransactionSerializer(transactions, many=True)
         response = Response(serializer.data)
         return response
-    @decorator.requires_token
+    #@decorator.requires_token
     def put(self, request):
         transaction_id = request.data.get('id')
         serializer = TransactionSerializer(data=request.data)
@@ -255,7 +258,7 @@ class TransactionView(APIView):
             return Response(serializer.data)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    @decorator.requires_token
+    #@decorator.requires_token
     def patch(self, request):
         transaction_id = request.data.get('id')
         from_step = request.data.get('from_step')
@@ -270,14 +273,14 @@ class TransactionView(APIView):
         return Response(serializer.data)
         
 class TeamView(APIView):
-    @decorator.requires_token
+    #@decorator.requires_token
     def post(self, request):
         print(request.data)
         serializer = TeamSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    @decorator.requires_token
+    #@decorator.requires_token
     def get(self, request):
         space_id = request.GET.get('space')
         team = Team.objects.filter(space_id=space_id).first()
@@ -287,7 +290,7 @@ class TeamView(APIView):
         response = Response(serializer.data)
         return response
 class UsersView(APIView):
-    @decorator.requires_token
+    #@decorator.requires_token
     def get(self, request):
         space_id = request.GET.get('space')
         id = Team.objects.filter(space_id=space_id).values_list('id', flat=True).first()
@@ -298,14 +301,14 @@ class UsersView(APIView):
         serializer = CustomUserSerializer(users, many=True)
         return Response(serializer.data)
 class MembershipView(APIView):
-    @decorator.requires_token
+    #@decorator.requires_token
     def post(self, request):
         print(request.data)
         serializer = MembershipSerializer(data=request.data,many=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    @decorator.requires_token
+    #@decorator.requires_token
     def get(self, request):
         id = request.headers.get('id')
         id = Team.objects.filter(space_id=id).values_list('id', flat=True).first()
@@ -313,14 +316,14 @@ class MembershipView(APIView):
         serializer = MembershipSerializer(user_ids,many=True)
         return Response(serializer.data)
 class TicketView(APIView):
-    @decorator.requires_token
+    #@decorator.requires_token
     def post(self, request):
         print(request.data)
         serializer = TicketSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    @decorator.requires_token
+    #@decorator.requires_token
     def get(self,request):
         workflow_ids = request.GET.get('workflowIds')
         tickets = Ticket.objects.filter(workflow=workflow_ids).order_by('id')  # Order the steps by ID
@@ -331,7 +334,7 @@ class TicketView(APIView):
         serializer = TicketSerializer(tickets, many=True)
         response = Response(serializer.data)
         return response
-    @decorator.requires_token
+    #@decorator.requires_token
     def put(self, request):
         ticket_id = request.GET.get('id')
         serializer = TicketSerializer(data=request.data)
@@ -345,7 +348,7 @@ class TicketView(APIView):
             return Response(serializer.data)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    @decorator.requires_token
+    #@decorator.requires_token
     def patch(self, request):
         ticket_id = request.data.get('id')
         to_step = request.data.get('status')
@@ -360,7 +363,7 @@ class TicketView(APIView):
         serializer = TicketSerializer(ticket)
         return Response(serializer.data)
     #delete ticket by its id 
-    @decorator.requires_token
+    #@decorator.requires_token
     def delete(self, request):
         ticket_id = request.GET.get('id')
         ticket = Ticket.objects.filter(id=ticket_id).first()
@@ -370,7 +373,7 @@ class TicketView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
     
 class TaskView(APIView):
-    @decorator.requires_token
+    #@decorator.requires_token
     def get(self, request):
         workflow_ids = request.GET.get('workflowIds')
         print(workflow_ids)
@@ -395,7 +398,7 @@ class TaskView(APIView):
         return Response(payloaD)
 
 class SprintView(APIView):
-    @decorator.requires_token
+    #@decorator.requires_token
     def post(self,request):
         print(request.data)
         sprint=request.data
@@ -404,7 +407,7 @@ class SprintView(APIView):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 class TicketsSprintView(APIView):
-    @decorator.requires_token
+    #@decorator.requires_token
     def put(self, request):
         print(request.data)
         sprint = request.data.get('sprint')
