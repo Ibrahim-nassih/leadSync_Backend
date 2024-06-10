@@ -110,8 +110,11 @@ class SpaceView(APIView):
         token = request.headers.get('Authorization')
         access_token = token[7:]
         #user=keycloak_openid.userinfo(access_token)
+
         user_info = jwt.decode(access_token, options={"verify_signature": False})
+        print(f"username: {user_info['preferred_username']}")
         user = CustomUser.objects.filter(username=user_info['preferred_username']).first()
+        print(f"user:{user}")
         serializer = SpaceSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.validated_data['created_by'] = user
